@@ -337,10 +337,7 @@ jvmtiError set_callbacks(jvmtiEnv *jvmti) {
     return (*jvmti)->SetEventCallbacks(jvmti, &callbacks, (jint)sizeof(callbacks));
 }
 
-JNIEXPORT jint JNICALL
-Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
-    open_map_file();
-
+void parse_arguments(char *options) {
     unfold_simple = strstr(options, "unfoldsimple") != NULL;
     unfold_all = strstr(options, "unfoldall") != NULL;
     unfold_inlined_methods = strstr(options, "unfold") != NULL || unfold_simple || unfold_all;
@@ -354,6 +351,15 @@ Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
     unfold_delimiter = use_semicolon_unfold_delimiter ? ";" : "->";
 
     debug_dump_unfold_entries = strstr(options, "debug_dump_unfold_entries") != NULL;
+}
+
+JNIEXPORT jint JNICALL
+Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
+    open_map_file();
+
+    if (options != NULL) {
+        parse_arguments(options);
+    }
 
     jvmtiEnv *jvmti;
     (*vm)->GetEnv(vm, (void **)&jvmti, JVMTI_VERSION_1);
@@ -368,3 +374,25 @@ Agent_OnAttach(JavaVM *vm, char *options, void *reserved) {
     return 0;
 }
 
+JNIEXPORT jint JNICALL
+Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
+    open_map_file();
+
+    if (options != NULL) {
+        parse_arguments(options);
+    }
+
+    jvmtiEnv *jvmti;
+    (*vm)->GetEnv(vm, (void **)&jvmti, JVMTI_VERSION_1);
+    enable_capabilities(jvmti);
+    set_callbacks(jvmti);
+    set_notification_mode(jvmti, JVMTI_ENABLE);
+
+    return 0;
+}
+
+JNIEXPORT void JNICALL
+Agent_OnUnload(JavaVM *vm) {
+    // No need to disable notifications. JVMTI isn't working at this point any more.
+    close_map_file();
+}

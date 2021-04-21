@@ -31,6 +31,11 @@ it fills with one line per code blob that maps a memory location to a code blob 
 The Java application takes the PID of a Java process as an argument and an arbitrary number of additional arguments which it passes to the agent.
 It then attaches to the target process and instructs it to load the agent library.
 
+Alternatively, the perf-map-agent can be attached at JVM startup with the help of the `-agentpath` option. In that case it will continuously dump the mappings of dynamically generated code to `/tmp/perf-<pid>.map`. The agent can be configured with the options described in the [Options](#options) section appended to the agent as follows:
+```
+perf record -g --call-graph java -agentpath:libperfmap.so=unfoldall,msig my.main.Class
+```
+
 ## Command line scripts
 
 The `bin` directory contains a set of shell scripts to combine common `perf` / `dtrace` perations with creating the map file.
